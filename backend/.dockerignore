@@ -1,0 +1,11 @@
+**/*.user
+**/*.suo
+**/bin
+**/obj
+**/Logs
+.git
+.gitignore
+.vs
+.vscode
+*.db
+*.local

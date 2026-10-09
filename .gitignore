@@ -1,0 +1,107 @@
+# ============================================
+# Node / Frontend
+# ============================================
+node_modules/
+dist/
+.cache/
+*.local
+
+# ============================================
+# Environment / Secrets
+# ============================================
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.pem
+*.key
+secrets/
+
+# ============================================
+# .NET / C# Build Artifacts
+# ============================================
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+*.ncrunch*
+_ReSharper*/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+*.pidb
+*.svclog
+*.scc
+*.swp
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# ============================================
+# Python / AI Service
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.pyc
+
+# ============================================
+# Docker
+# ============================================
+.docker/
+
+# ============================================
+# Logs
+# ============================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# OS / Editor
+# ============================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+*~
+desktop.ini
+
+# ============================================
+# Testing
+# ============================================
+coverage/
+.nyc_output/
+htmlcov/
+.pytest_cache/
+.coverage
+
+# ============================================
+# Misc
+# ============================================
+*.bak
+*.tmp
+~$*

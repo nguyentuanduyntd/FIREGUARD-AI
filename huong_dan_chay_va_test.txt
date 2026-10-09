@@ -1,0 +1,169 @@
+HƯỚNG DẪN KHỞI CHẠY VÀ KIỂM THỬ HỆ THỐNG FIREGUARD AI
+======================================================
+
+Tài liệu này hướng dẫn chi tiết cách khởi chạy toàn bộ mã nguồn hệ thống FireGuard AI và cách kiểm thử từng tính năng nghiệp vụ.
+
+------------------------------------------------------
+PHẦN 1: CÁC DỊCH VỤ VÀ ĐỊA CHỈ TRUY CẬP TRONG HỆ THỐNG
+------------------------------------------------------
+Sau khi khởi chạy thành công, các cổng dịch vụ mặc định như sau:
+1. Giao diện người dùng (Frontend React - Vite): http://localhost:3000
+2. Swagger API Documentation (Backend .NET): http://localhost:5108/swagger (hoặc http://localhost:5000/swagger)
+3. Bảng điều khiển Hangfire (Background Jobs): http://localhost:5108/hangfire (hoặc http://localhost:5000/hangfire)
+4. AI Service (Python FastAPI): http://localhost:8000 (Swagger docs: http://localhost:8000/docs)
+5. MinIO Console (Quản lý Object Storage): http://localhost:9001
+   - Tài khoản: minioadmin
+   - Mật khẩu: minioadminpassword
+6. Redis Caching: localhost:6379
+7. MySQL Database: localhost:3306 (Database: fireguard_db)
+
+------------------------------------------------------
+PHẦN 2: HƯỚNG DẪN KHỞI CHẠY FULL HỆ THỐNG (3 TERMINAL)
+------------------------------------------------------
+
+Để chạy hệ thống phục vụ phát triển (Development / Debug), cần mở 3 Terminal riêng biệt:
+
+>>> TERMINAL 1: Khởi động các dịch vụ nền (Docker)
+1. Mở PowerShell hoặc CMD tại thư mục gốc: `d:\FIREGUARD-AI`
+2. Chạy lệnh:
+   docker compose -f docker-compose.dev.yml up -d mysql redis minio ai-service
+
+>>> TERMINAL 2: Khởi chạy Backend (.NET Core WebAPI)
+1. Chuyển vào thư mục backend:
+   cd d:\FIREGUARD-AI\backend
+2. Chạy lệnh:
+   dotnet run --project src/FireGuard.API
+   * Lưu ý: Hệ thống đã tích hợp cơ chế tự động chạy Migration và nạp dữ liệu mẫu (Seed Data) ngay khi chạy. Bạn KHÔNG cần chạy lệnh "dotnet ef database update" thủ công.
+
+>>> TERMINAL 3: Khởi chạy Frontend (React + TypeScript + Vite)
+1. Chuyển vào thư mục frontend:
+   cd d:\FIREGUARD-AI\frontend
+2. Cài đặt thư viện (nếu mới clone hoặc chưa chạy lần nào):
+   npm install
+3. Chạy máy chủ giao diện:
+   npm run dev
+   * LƯU Ý QUAN TRỌNG:
+     - Frontend là dự án Node.js/React, PHẢI chạy bằng: `npm run dev`
+     - KHÔNG CHẠY lệnh `dotnet run` trong thư mục frontend (sẽ gặp lỗi "Couldn't find a project to run").
+
+------------------------------------------------------
+PHẦN 3: XỬ LÝ CÁC LỖI THƯỜNG GẶP KHI CHẠY (TROUBLESHOOTING)
+------------------------------------------------------
+1. Lỗi "Couldn't find a project to run" tại thư mục frontend:
+   -> Nguyên nhân: Bạn đang gõ nhầm lệnh `dotnet run` bên trong thư mục `frontend`.
+   -> Cách sửa: Gõ `npm run dev` để chạy giao diện.
+
+2. Lỗi cổng 3000 hoặc 5108 bị chiếm dụng (Port already in use):
+   -> Kiểm tra xem có tiến trình cũ đang chạy ngầm hay không bằng Task Manager hoặc lệnh:
+      netstat -ano | findstr :3000
+      netstat -ano | findstr :5108
+
+3. Lỗi không kết nối được Database MySQL / Redis / MinIO:
+   -> Kiểm tra Docker đã khởi động chưa: `docker ps`
+   -> Khởi động lại: `docker compose -f docker-compose.dev.yml restart`
+
+------------------------------------------------------
+PHẦN 4: TÀI KHOẢN DEMO SỬ DỤNG ĐỂ KIỂM THỬ (SEED DATA)
+------------------------------------------------------
+Hệ thống tự động nạp sẵn dữ liệu mẫu khi backend khởi chạy lần đầu.
+Mật khẩu chung cho TẤT CẢ tài khoản demo là: FireGuard@2026
+
+Danh sách tài khoản kiểm thử:
+1. Quản trị viên (Admin):
+   - Username: admin | Email: admin@fireguard.vn
+2. Nhân viên kinh doanh (Sales):
+   - Username: sales1 | Email: sales1@fireguard.vn
+3. Kỹ thuật viên bảo trì (Technician):
+   - Username: tech1 đến tech10 | Email: tech1@fireguard.vn
+4. Đội trưởng lắp đặt:
+   - Username: leader1 | Email: leader1@fireguard.vn
+5. Khách hàng (Customer):
+   - Username: customer1 đến customer20 | Email: customer1@client.com
+
+------------------------------------------------------
+PHẦN 5: HƯỚNG DẪN KIỂM THỬ CHI TIẾT CÁC TÍNH NĂNG
+------------------------------------------------------
+
+1. CHẨN ĐOÁN THIẾT BỊ PCCC BẰNG TRÍ TUỆ NHÂN TẠO (AI DIAGNOSTIC)
+   - Đường dẫn: Menu "Chẩn đoán AI" (`http://localhost:3000/ai-diagnostic`)
+   - Các bước test:
+     a. Tải lên ảnh chụp thực tế của thiết bị PCCC (đồng hồ áp suất bình chữa cháy, van, đầu báo khói, ống nước...) hoặc click vào một ảnh mẫu có sẵn trên giao diện.
+     b. Bấm nút "Phân Tích Bằng AI".
+     c. Xem kết quả trả về từ AI:
+        + Tên thiết bị và tình trạng hư hại / bất thường.
+        + Mức độ nguy cơ (Low, Medium, High, Critical) hiển thị kèm màu sắc cảnh báo.
+        + Nguyên nhân kỹ thuật dự đoán.
+        + Phương án khắc phục & đề xuất xử lý ngay.
+     d. Bấm "Tạo Yêu Cầu Sửa Chữa Ngay": hệ thống tự động điền sẵn các phát hiện của AI vào đơn dịch vụ giúp khách hàng không cần nhập lại.
+
+2. BÁO GIÁ SƠ BỘ TỰ ĐỘNG BẰNG AI (AI PRELIMINARY QUOTATION)
+   - Đường dẫn: Menu "Báo giá sơ bộ AI" (`http://localhost:3000/ai-quotation`) hoặc khi tạo mới đơn dịch vụ.
+   - Các bước test:
+     a. Nhập thông tin sự cố hoặc tải lên ảnh lỗi thiết bị.
+     b. Chọn "Tính toán dự toán & báo giá AI".
+     c. AI sẽ phân tích mức độ hỏng hóc, bóc tách danh mục vật tư cần thay thế (ron cao su, nạp bột ABC, thay đồng hồ đo áp, đầu báo khói...), chi phí nhân công dự kiến và tổng tiền sơ bộ.
+     d. Người dùng có thể chỉnh sửa số lượng hoặc xác nhận chuyển đổi thành báo giá chính thức.
+
+3. QUY TRÌNH ĐIỀU PHỐI TỰ ĐỘNG THỜI GIAN THỰC (AI DISPATCHING)
+   - Mục đích: Hệ thống tự động tìm thợ tối ưu nhất (khoảng cách, điểm số sao, kỹ năng), gửi lời mời nhận việc và chuyển tiếp nếu quá 60s.
+   - Các bước test:
+     a. Đăng nhập bằng tài khoản `customer1`. Tạo một yêu cầu sửa chữa (Service Request) mới hoặc tìm một yêu cầu đang ở trạng thái `AwaitingDispatch`.
+     b. Hệ thống tự động tính điểm kỹ thuật viên xung quanh bằng thuật toán AI.
+     c. Thợ có điểm cao nhất (ví dụ `tech1`) được chọn làm ứng viên. Đơn chuyển trạng thái `Dispatching` và kích hoạt đồng hồ đếm ngược 60 giây.
+     d. Đăng nhập bằng `tech1`. Xem popup thông báo SignalR và bấm nhận việc hoặc gọi API `/api/services/accept-offer`.
+     e. Nếu `tech1` từ chối hoặc để quá 60 giây: hệ thống tự động chuyển đơn cho thợ có điểm cao thứ nhì (`tech2`) và bắt đầu chu kỳ 60s tiếp theo.
+     f. Nếu duyệt hết thợ khả dụng mà không ai nhận, đơn chuyển về `AwaitingDispatch` để Admin xử lý thủ công.
+
+4. BẢN ĐỒ GIÁM SÁT GPS THỜI GIAN THỰC
+   - Đường dẫn: Menu "Bản đồ giám sát" (`http://localhost:3000/map`)
+   - Các bước test:
+     a. Vào bản đồ bằng tài khoản `admin`. Quan sát vị trí khách hàng và các kỹ thuật viên đang trực tuyến trên bản đồ Leaflet.
+     b. Kiểm tra cơ chế chống spam định vị (GPS Throttling): nếu kỹ thuật viên gửi tọa độ với tần suất < 10 giây/lần, hệ thống sẽ bỏ qua để tiết kiệm băng thông và pin.
+     c. Thử nghiệm nhập tọa độ ngoài dải vật lý hợp lệ (Vĩ độ ngoài [-90, 90], Kinh độ ngoài [-180, 180]): Backend trả về mã lỗi 400 Bad Request để ngăn chặn GPS Spoofing.
+
+5. TẠO MÃ QR CODE VÀ TRA CỨU VÒNG ĐỜI THIẾT BỊ PCCC (EQUIPMENT PASSPORT)
+   - Đường dẫn: Menu "Mã QR & Hạn bảo trì" (`http://localhost:3000/scan`)
+   - Các bước test:
+     a. Tab 1 ("Tra cứu & Kiểm tra"): Click vào mã serial mẫu (ví dụ `SN-2026-FIREGUARD-0050`). Hệ thống hiển thị: Mã QR, Ngày lắp đặt, Hạn bảo hành, Lần bảo trì trước, Hạn bảo trì tiếp theo và cảnh báo quá hạn.
+     b. Bấm "Ghi Nhận Vừa Bảo Dưỡng": Nhập tên thợ và ghi chú. Hệ thống tự động gia hạn thêm chu kỳ 6 tháng tiếp theo.
+     c. Tab 2 ("Tạo mã định danh QR mới"): Nhập loại thiết bị, ngày lắp đặt, hạn bảo hành, vị trí. Bấm "Tạo mã QR & Kích hoạt", sau đó bấm "In Tem Dán Thiết Bị Ngay".
+     d. Tab 3 ("Sổ cái thiết bị"): Lọc danh sách thiết bị quá hạn và in tem QR hàng loạt.
+
+6. BẢNG ĐIỀU KHIỂN KPI KỸ THUẬT VIÊN
+   - Đường dẫn: Menu "Đánh giá KPI" (`http://localhost:3000/kpi`)
+   - Các bước test:
+     a. Đăng nhập quyền `admin`, xem xếp hạng thợ theo điểm số KPI tổng hợp (đúng giờ, đánh giá khách hàng, hoàn thành lần đầu...).
+     b. Chọn `tech1`, bấm "Adjust KPI" (Điều chỉnh điểm số).
+     c. Nhập điểm điều chỉnh kèm lý do bắt buộc và lưu lại.
+     d. Đăng nhập tài khoản `tech1` để thấy điểm đã cập nhật kèm lý do từ Admin.
+     e. Vào trang "Nhật ký hệ thống" (Audit Log) để kiểm tra bản ghi thay đổi KPI với đầy đủ chi tiết Before/After.
+
+7. BACKGROUND JOB QUÉT BẢO TRÌ ĐỊNH KỲ (HANGFIRE)
+   - Đường dẫn: `http://localhost:5108/hangfire` (hoặc `http://localhost:5000/hangfire`)
+   - Các bước test:
+     a. Vào mục "Recurring Jobs", tìm `MaintenanceReminderJob` và bấm "Trigger Now" để kích hoạt tức thì.
+     b. Kiểm tra hệ thống tự động sinh bản ghi nhắc nhở bảo trì cho các thiết bị sắp đến hạn hoặc quá hạn.
+     c. Khách hàng `customer1` nhận thông báo chuông. Bấm "Đồng ý" để tự động tạo đơn dịch vụ điều phối, hoặc "Từ chối" để hủy đơn nháp.
+
+8. XUẤT BÁO CÁO NỀN (REPORT EXPORT) VÀ MINIO STORAGE
+   - Đường dẫn: Menu "Báo cáo" (`http://localhost:3000/reports`)
+   - Các bước test:
+     a. Chọn xuất báo cáo Kho hoặc Doanh thu dưới dạng CSV/Excel.
+     b. Bấm "Xuất báo cáo": Yêu cầu được gửi vào hàng đợi Hangfire xử lý ngầm, giao diện không bị giật lag.
+     c. Khi hoàn tất, chuông thông báo SignalR báo file sẵn sàng kèm link tải có thời hạn bảo mật 24h từ MinIO.
+
+9. NHẬT KÝ KIỂM TOÁN AN TOÀN (AUDIT LOGS)
+   - Đường dẫn: Menu "Nhật ký hệ thống" (`http://localhost:3000/audit-logs`)
+   - Các bước test:
+     a. Đăng nhập tài khoản `admin`. Xem chi tiết thay đổi dữ liệu dạng JSON Diff trực quan.
+     b. Kiểm tra cơ chế Data Masking: các trường nhạy cảm như "password", "token", "secretKey" đều tự động được che dạng `[MASKED]`.
+
+------------------------------------------------------
+PHẦN 6: CHẠY BỘ KIỂM THỬ TỰ ĐỘNG (AUTOMATED TESTS)
+------------------------------------------------------
+1. Chạy toàn bộ Unit Tests & Integration Tests Backend (xUnit):
+   cd d:\FIREGUARD-AI\backend
+   dotnet test
+
+2. Kiểm tra log test:
+   Đảm bảo toàn bộ các kịch bản quan trọng (AI Dispatching Race Condition, KPI Weight Calculation, Concurrency Check, Stock Verification) đều PASS.

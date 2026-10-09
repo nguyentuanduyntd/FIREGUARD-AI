@@ -1,0 +1,129 @@
+HƯỚNG DẪN KHỞI CHẠY VÀ KIỂM THỬ HỆ THỐNG FIREGUARD AI
+======================================================
+
+Tài liệu này hướng dẫn chi tiết cách chạy toàn bộ mã nguồn hệ thống FireGuard AI và cách kiểm thử từng tính năng nghiệp vụ.
+
+------------------------------------------------------
+PHẦN 1: CÁC DỊCH VỤ VÀ ĐỊA CHỈ TRUY CẬP TRONG HỆ THỐNG
+------------------------------------------------------
+Sau khi khởi chạy thành công, các cổng dịch vụ mặc định như sau:
+1. Giao diện người dùng (Frontend React): http://localhost:3000 (hoặc http://localhost:5173 ở chế độ Dev)
+2. Swagger API Documentation (Backend): http://localhost:5108/swagger (Chỉ mở ở môi trường Development)
+3. API Trí tuệ nhân tạo (AI-Service Python): http://localhost:8000 (Mặc định)
+4. Bảng điều khiển Hangfire (Background Jobs): http://localhost:5108/hangfire
+5. MinIO Console (Quản lý lưu trữ tệp): http://localhost:9001
+   - Tài khoản: minioadmin
+   - Mật khẩu: minioadminpassword
+6. Redis Caching: localhost:6379
+
+------------------------------------------------------
+PHẦN 2: HƯỚNG DẪN KHỞI CHẠY FULL HỆ THỐNG
+------------------------------------------------------
+
+PHƯƠNG ÁN: KHỞI CHẠY THỦ CÔNG TỪNG THÀNH PHẦN (Dành Cho Debug)
+------------------------------------------------------------------
+Bước 1: Khởi động các dịch vụ nền (MySQL, Redis, MinIO)
+- Chạy lệnh sau tại thư mục gốc `fireguard-ai`:
+`docker compose -f docker-compose.dev.yml up -d mysql redis minio`
+
+Bước 2: Khởi chạy AI Service (Trí tuệ nhân tạo)
+- Mở một terminal mới, chuyển vào thư mục ai-service: `cd ai-service`
+- Kích hoạt môi trường ảo (nếu có dùng venv): `.\venv\Scripts\activate`
+- Chạy dịch vụ bằng lệnh:
+`python main.py`
+  *(Lưu ý: Dịch vụ AI này bắt buộc phải chạy để các tính năng như 'Báo giá AI' hoặc 'Chấm điểm kỹ thuật viên' từ Backend có thể hoạt động được. Port: 8000)*
+
+Bước 3: Khởi chạy Backend API
+- Mở một terminal mới, chuyển vào thư mục backend: `cd backend`
+- Chạy API trực tiếp bằng lệnh:
+`dotnet run --project src/FireGuard.API`
+  *(Lưu ý: Hệ thống đã được lập trình để tự động chạy Migration Database và nạp dữ liệu mẫu (Seed Data) ngay khi khởi chạy backend. Bạn KHÔNG cần cài đặt hay chạy lệnh "dotnet ef database update" thủ công).*
+
+Bước 4: Khởi chạy Frontend React Client
+- Mở terminal khác, chuyển vào thư mục frontend: `cd frontend`
+- Cài đặt thư viện: `npm install`
+- Chạy dev server: `npm run dev`
+
+------------------------------------------------------
+PHẦN 3: TÀI KHOẢN DEMO SỬ DỤNG ĐỂ KIỂM THỬ (SEED DATA)
+------------------------------------------------------
+Hệ thống tự động tạo sẵn dữ liệu mẫu khi chạy backend lần đầu tiên.
+Mật khẩu chung của tất cả các tài khoản demo là: FireGuard@2026
+
+Danh sách tài khoản kiểm thử:
+1. Quản trị viên (Admin):
+   - Username: admin | Email: admin@fireguard.vn
+2. Nhân viên kinh doanh (Sales):
+   - Username: sales1 | Email: sales1@fireguard.vn
+3. Kỹ thuật viên bảo trì (Technician):
+   - Username: tech1 đến tech10 | Email: tech1@fireguard.vn
+4. Đội trưởng lắp đặt:
+   - Username: leader1 | Email: leader1@fireguard.vn
+5. Khách hàng (Customer):
+   - Username: customer1 đến customer20 | Email: customer1@client.com
+
+------------------------------------------------------
+PHẦN 4: HƯỚNG DẪN KIỂM THỬ CHI TIẾT TỪNG CHỨC NĂNG
+------------------------------------------------------
+
+1. KIỂM THỬ QUY TRÌNH ĐIỀU PHỐI TỰ ĐỘNG (AI DISPATCHING)
+   - Mục đích: Hệ thống tự động chọn thợ tốt nhất, gửi đề xuất và chuyển người nếu từ chối hoặc quá 60s.
+   - Các bước test:
+     a. Đăng nhập bằng tài khoản `customer1`. Tạo một yêu cầu sửa chữa (Service Request) mới hoặc tìm một yêu cầu đang ở trạng thái `AwaitingDispatch`.
+     b. Hệ thống sẽ tự động chấm điểm các kỹ thuật viên gần đó bằng thuật toán AI (khoảng cách, đánh giá sao, tỷ lệ nhận việc, kỹ năng phù hợp).
+     c. Kỹ thuật viên cao điểm nhất (ví dụ `tech1`) sẽ được gán làm ứng viên đề xuất. Hệ thống chuyển trạng thái đơn thành `Dispatching` và lưu hạn nhận việc trong 60 giây.
+     d. Đăng nhập bằng tài khoản `tech1`. Kiểm tra thông báo SignalR hiển thị pop-up đề xuất công việc hoặc gọi API nhận đơn `/api/services/accept-offer`.
+     e. Nếu từ chối nhận việc (Reject) hoặc không nhấn nút nhận việc trong vòng 60 giây, kiểm tra lịch sử nhật ký: Hệ thống sẽ tự động gán cho kỹ thuật viên tiếp theo có số điểm cao thứ 2 (ví dụ `tech2`) và hẹn giờ tiếp 60 giây.
+     f. Nếu chạy hết danh sách không có thợ nhận, trạng thái sẽ chuyển về `AwaitingDispatch` và thông báo tới Admin để gán thủ công.
+
+2. KIỂM THỬ BACKGROUND JOB QUÉT BẢO TRÌ VÀ NHẮC LỊCH
+   - Mục đích: Quét thiết bị sắp đến hạn bảo trì định kỳ, gửi mail và thông báo in-app để khách xác nhận.
+   - Các bước test:
+     a. Truy cập trang điều khiển Hangfire Dashboard: `http://localhost:5000/hangfire`.
+     b. Tìm Recurring Job tên `MaintenanceReminderJob` và bấm "Trigger Now" để kích hoạt quét ngay lập tức mà không cần đợi đến nửa đêm.
+     c. Check database hoặc giao diện Admin xem các thiết bị quá hạn bảo trì hoặc còn hạn 3 ngày, 7 ngày có được sinh bản ghi nhắc nhở bảo trì (Maintenance Reminder) nháp hay không.
+     d. Đăng nhập tài khoản khách hàng `customer1`. Xem thông báo chuông báo nhắc nhở bảo trì. Khách hàng bấm nút "Đồng ý" (Accept) hoặc "Từ chối/Hoãn lịch" (Decline) đề xuất bảo trì.
+     e. Kiểm tra: Nếu khách đồng ý, Service Request nháp sẽ được kích hoạt chuyển sang trạng thái `AwaitingDispatch` để bắt đầu quy trình AI điều phối. Nếu từ chối, Service Request nháp sẽ bị hủy (`Cancelled`).
+
+3. KIỂM THỬ ĐÁNH GIÁ KPI KỸ THUẬT VIÊN
+   - Mục đích: Tính toán điểm số KPI hàng tháng của thợ, cho phép Admin điều chỉnh điểm số có lưu audit log.
+   - Các bước test:
+     a. Vào trang KPI Dashboard bằng tài khoản `admin`. Xem bảng xếp hạng thợ theo điểm số KPI tổng hợp (tính theo trọng số: đi đúng giờ, đánh giá sao của khách, tỷ lệ sửa lỗi lần đầu...).
+     b. Chọn kỹ thuật viên `tech1`, bấm vào nút "Adjust KPI" (Điều chỉnh điểm số).
+     c. Điền số điểm điều chỉnh (ví dụ: cộng thêm 5 điểm hoặc trừ 10 điểm) kèm theo lý do bắt buộc và bấm lưu.
+     d. Đăng nhập tài khoản `tech1`, kiểm tra bảng KPI của mình để thấy điểm số đã thay đổi và ghi chú giải thích từ Admin.
+     e. Vào trang "Nhật ký hệ thống" (Audit Log) với quyền admin, xác minh bản ghi thay đổi KPI này đã được ghi nhận với đầy đủ thông tin so sánh giá trị trước và sau khi thay đổi.
+
+4. KIỂM THỬ BẢN ĐỒ GOOGLE MAPS VÀ LỊCH SỬ GPS THỢ
+   - Mục đích: Theo dõi thợ thời gian thực trên bản đồ, tính khoảng cách địa lý và ETA an toàn.
+   - Các bước test:
+     a. Truy cập trang bản đồ giám sát trên Admin Portal. Bạn sẽ thấy vị trí các khách hàng và tọa độ thời gian thực của các kỹ thuật viên đang online.
+     b. Giả lập kỹ thuật viên gửi tọa độ định vị GPS mới thông qua API gửi vị trí. Throttling đã được cài đặt: nếu cập nhật quá nhanh (dưới 10 giây/lần), API sẽ bỏ qua để tiết kiệm tài nguyên mạng và pin thiết bị.
+     c. Nhập tọa độ lỗi vượt ngoài phạm vi vật lý (vĩ độ ngoài [-90, 90], kinh độ ngoài [-180, 180]). API sẽ trả về lỗi HTTP 400 Bad Request để phòng tránh hành vi GPS spoofing.
+
+5. KIỂM THỬ XUẤT BÁO CÁO (REPORTS CENTER) VÀ MINIO
+   - Mục đích: Cho phép người dùng xuất báo cáo nặng dạng PDF hoặc Excel dưới nền và gửi link tải khi hoàn tất.
+   - Các bước test:
+     a. Trên trang Báo Cáo (Reports), chọn xuất Báo cáo Kho hoặc Doanh thu dưới dạng CSV/Excel.
+     b. Bấm nút "Xuất báo cáo". Yêu cầu sẽ được chuyển xuống Hangfire chạy ngầm. Giao diện client hiển thị trạng thái "Đang xử lý..." giúp giao diện không bị treo.
+     c. Khi báo cáo hoàn thành, kiểm tra SignalR: chuông thông báo sẽ nhấp nháy báo "Báo cáo của bạn đã sẵn sàng".
+     d. Bấm vào link để tải xuống. Link tải file này được cấp phát token có thời hạn tối đa là 24 giờ.
+
+6. KIỂM THỬ NHẬT KÝ HỆ THỐNG (AUDIT LOGS)
+   - Mục đích: Admin truy vết hành động của người dùng, đảm bảo các dữ liệu nhạy cảm được che giấu.
+   - Các bước test:
+     a. Đăng nhập tài khoản `admin`. Truy cập mục "Nhật ký hệ thống".
+     b. Thực hiện thay đổi thông tin khách hàng hoặc cập nhật thông tin thiết bị ở trang khác.
+     c. Quay lại trang Audit Log. Tìm dòng nhật ký hành động vừa thực hiện. Bấm chọn để xem chi tiết JSON Diff (so sánh side-by-side sự khác nhau của các thuộc tính trước và sau khi đổi).
+     d. Thử đổi mật khẩu người dùng hoặc đăng nhập. Xác minh trong bản ghi Audit Log: các trường chứa "password", "token", "secretKey" đều hiển thị dưới dạng dấu sao che giấu `[MASKED]` để tránh rò rỉ dữ liệu nhạy cảm.
+
+------------------------------------------------------
+PHẦN 5: CHẠY BỘ KIỂM THỬ TỰ ĐỘNG (AUTOMATED TESTS)
+------------------------------------------------------
+
+1. Chạy tất cả các unit tests phía Backend (xUnit):
+   `cd backend`
+   `dotnet test`
+
+2. Kiểm tra log test:
+   Đảm bảo tất cả các kịch bản test quan trọng như: race condition khi 2 thợ cùng nhấn nhận 1 đơn hàng, tính toán KPI mẫu, và kiểm tra giới hạn tồn kho khi xuất vật tư đều đạt trạng thái PASSED.

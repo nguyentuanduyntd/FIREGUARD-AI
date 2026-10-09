@@ -1,0 +1,114 @@
+================================================================================
+                    FIREGUARD AI - TỔNG QUAN DỰ ÁN
+================================================================================
+
+1. GIỚI THIỆU CHUNG
+--------------------------------------------------------------------------------
+FireGuard AI là hệ thống quản lý nguồn lực doanh nghiệp (ERP Mini) toàn diện,
+chuyên biệt cho các doanh nghiệp cung cấp, lắp đặt, bảo trì và sửa chữa thiết
+bị phòng cháy chữa cháy (PCCC) tích hợp trí tuệ nhân tạo (AI).
+
+Hệ thống được thiết kế theo kiến trúc sạch (Clean Architecture) hiện đại,
+bảo mật cao, hiệu năng tối ưu và hỗ trợ container hóa hoàn toàn bằng Docker.
+
+2. KIẾN TRÚC & CÔNG NGHỆ SỬ DỤNG
+--------------------------------------------------------------------------------
+Hệ thống được xây dựng theo mô hình kiến trúc phân lớp (Hybrid Distributed):
+
+*  Frontend SPA: React 18, TypeScript, Vite, Material UI (MUI), Redux Toolkit,
+   React Query.
+*  Backend API: ASP.NET Core 8.0 Web API, Entity Framework Core 8.0,
+   Hangfire (Tác vụ chạy ngầm), SignalR (Thông báo realtime).
+*  AI Service: Python FastAPI, tích hợp OpenAI SDK, Gemini SDK, và các thư
+   viện tối ưu hóa định tuyến.
+*  Cơ sở dữ liệu & Hạ tầng:
+   - MySQL 8.0: Cơ sở dữ liệu quan hệ chính.
+   - Redis: Lưu trữ cache hiệu năng cao & Backplane cho SignalR.
+   - MinIO: Lưu trữ đối tượng (Object Storage tương thích S3) dùng cho tài liệu,
+     hình ảnh nghiệm thu và file báo cáo xuất ra.
+   - Nginx: Reverse Proxy điều phối lưu lượng.
+
+3. CẤU TRÚC THƯ MỤC DỰ ÁN
+--------------------------------------------------------------------------------
+Thư mục gốc của dự án chứa các thành phần chính sau:
+
+fireguard-ai/
+├── ai-service/              # Dịch vụ AI (Python FastAPI)
+│   ├── app/                 # Mã nguồn xử lý AI (RAG, Chẩn đoán, Định tuyến)
+│   └── Dockerfile           # File build container dịch vụ AI
+├── backend/                 # API chính (.NET 8 Clean Architecture)
+│   ├── src/
+│   │   ├── FireGuard.Domain/         # Core Domain (Thực thể, Enums, Logic cốt lõi)
+│   │   ├── FireGuard.Application/    # Tầng Application (DTOs, CQRS Handlers, Interfaces)
+│   │   ├── FireGuard.Infrastructure/ # Tầng Infrastructure (DB Context, Redis, MinIO, Jobs)
+│   │   └── FireGuard.API/            # Tầng API (Controllers, SignalR Hubs, Middlewares)
+│   └── Dockerfile           # File build container cho backend API
+├── frontend/                # Ứng dụng client (React Vite SPA)
+│   ├── src/                 # Mã nguồn React (Pages, Components, Redux Slices, Hooks)
+│   └── Dockerfile           # File build Nginx container chạy frontend
+├── scripts/                 # Các script sao lưu & khôi phục dữ liệu (MySQL & MinIO)
+├── docker-compose.dev.yml   # Cấu hình Docker Compose cho môi trường phát triển (Dev)
+├── docker-compose.prod.yml  # Cấu hình Docker Compose cho môi trường vận hành (Prod)
+└── README.md                # Tài liệu hướng dẫn sử dụng tiếng Việt chi tiết
+
+4. CÁC TÍNH NĂNG NỔI BẬT TÍCH HỢP AI & NGHIỆP VỤ
+--------------------------------------------------------------------------------
+*  AI Báo Giá Sơ Bộ: Đề xuất báo giá vật tư, thiết bị tự động dựa trên quy mô,
+   diện tích, số tầng và tiêu chuẩn PCCC Việt Nam (TCVN 3890).
+*  AI Diagnostics (Chẩn đoán lỗi): Hỗ trợ kỹ thuật viên chẩn đoán sự cố tủ báo
+   cháy hoặc đầu báo lỗi bằng hình ảnh hoặc mô tả mã lỗi.
+*  AI Dispatching & Auto-routing: Thuật toán thông minh phân phối công việc cho
+   kỹ thuật viên dựa trên: Khoảng cách GPS, Kỹ năng, Đánh giá, Lượng việc hiện tại.
+*  Daily Maintenance Scanner (Hangfire): Quét tự động mỗi đêm để phát hiện các
+   thiết bị sắp đến hạn bảo trì định kỳ và tạo thông báo nhắc nhở tự động.
+*  Google Maps & GPS Tracking: Định vị thời gian thực tọa độ của thợ, tính toán
+   ETA và kiểm soát việc Check-in/Check-out tại công trường trong bán kính 100m.
+*  Security Audit Logs: Ghi vết toàn bộ thao tác tạo, sửa, xóa dữ liệu nhạy cảm,
+   tự động ẩn các thông tin bảo mật (mật khẩu, token) bằng nhãn [MASKED].
+*  Reports Export Center: Tạo báo cáo tồn kho, doanh thu định dạng Excel/PDF
+   dưới nền thông qua Hangfire và gửi link tải qua SignalR sau khi hoàn tất.
+
+5. DANH SÁCH TÀI KHOẢN DEMO (Mật khẩu chung: FireGuard@2026)
+--------------------------------------------------------------------------------
+Hệ thống tự động tạo sẵn các tài khoản demo sau khi backend chạy lần đầu tiên:
+
+*  System Admin:
+   - Username: admin | Email: admin@fireguard.vn
+   - Quyền hạn: Xem Dashboard tổng thể, cấu hình KPI, duyệt báo giá, audit log.
+*  Nhân viên kinh doanh (Sales):
+   - Username: sales1 | Email: sales1@fireguard.vn
+   - Quyền hạn: Tạo báo giá sơ bộ AI, quản lý khách hàng, nhà cung cấp, hợp đồng.
+*  Đội trưởng lắp đặt (Leader):
+   - Username: leader1 | Email: leader1@fireguard.vn
+   - Quyền hạn: Phân bổ nhân sự lắp đặt, lập tiến độ dự án, duyệt nghiệm thu.
+*  Nhân viên lắp đặt (Staff):
+   - Username: member1 | Email: member1@fireguard.vn
+   - Quyền hạn: Check-in/out GPS, quét mã QR kích hoạt thiết bị tại công trình.
+*  Kỹ thuật viên (Technician):
+   - Username: tech1 | Email: tech1@fireguard.vn
+   - Quyền hạn: Nhận đơn sửa chữa AI điều phối, chẩn đoán lỗi, báo cáo kết quả.
+*  Khách hàng (Customer):
+   - Username: customer1 | Email: customer1@client.com
+   - Quyền hạn: Gửi yêu cầu sửa chữa khẩn cấp, xác nhận lịch bảo trì định kỳ.
+
+6. CỔNG DỊCH VỤ MẶC ĐỊNH
+--------------------------------------------------------------------------------
+*  Frontend Client: http://localhost:3000 (Production) hoặc http://localhost:5173 (Dev)
+*  Backend API Swagger docs: http://localhost:5000/swagger (Chỉ mở ở Dev mode)
+*  Hangfire Dashboard: http://localhost:5000/hangfire
+*  MinIO Console: http://localhost:9001 (User/Pass: minioadmin / minioadminpassword)
+*  FastAPI AI Service: http://localhost:8000
+
+7. HƯỚNG DẪN KHỞI CHẠY NHANH
+--------------------------------------------------------------------------------
+Cách nhanh nhất và khuyên dùng là sử dụng Docker Compose:
+
+Bước 1: Tạo file .env từ file mẫu
+   cp .env.example .env
+
+Bước 2: Khởi chạy toàn bộ hệ thống bằng docker-compose
+   docker compose -f docker-compose.dev.yml up -d --build
+
+(Hệ thống sẽ tự động khởi tạo MySQL, Redis, MinIO, chạy Migration Database và
+nạp dữ liệu demo sẵn sàng để sử dụng ngay).
+================================================================================

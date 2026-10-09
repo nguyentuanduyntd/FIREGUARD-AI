@@ -1,0 +1,64 @@
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
+  color: #f8fafc;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f111a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Leaflet Routing & Popup Text Fix: Đảm bảo chữ chỉ đường và thông tin popup luôn hiển thị màu đen rõ nét */
+.leaflet-routing-container,
+.leaflet-routing-container *,
+.leaflet-routing-alt,
+.leaflet-routing-alt table,
+.leaflet-routing-alt tr,
+.leaflet-routing-alt td,
+.leaflet-routing-alt h2,
+.leaflet-routing-alt h3,
+.leaflet-routing-alt span {
+  color: #0f172a !important;
+  font-weight: 500 !important;
+}
+
+.leaflet-routing-container {
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.leaflet-popup-content,
+.leaflet-popup-content *,
+.leaflet-popup-content-wrapper {
+  color: #0f172a !important;
+}
+
